@@ -1,7 +1,0 @@
-ufw
-libpam-u2f
-systemd-cryptsetup
-openssh-client
-keepassxc
-debsums
-clamav

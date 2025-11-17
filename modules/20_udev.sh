@@ -8,11 +8,12 @@ say(){ echo -e "\n[ $(date '+%F %T') ] $*"; }
 
 # --- Variables ---
 RULE_FILE="/etc/udev/rules.d/99-yubikey.rules"
-VENDOR="1050"      # YubiKey vendor ID\PRODUCT="0407"     # Challenge‑Response / FIDO2 capable key
+VENDOR="1050"      # YubiKey vendor ID\
+PRODUCT="0407"     # Challenge‑Response / FIDO2 capable key
 
 say "[20] Applying YubiKey udev rules"
 
-# Ensure user is in plugdev
+# Ensure user is in plugdev, clamav, journalctl groups
 groups "$USER" | grep -q '\bplugdev\b' || {
     say "Adding user $USER to plugdev group";
     sudo usermod -aG plugdev "$USER";

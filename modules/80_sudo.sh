@@ -11,7 +11,11 @@ say "[80] Optional sudo hardening"
 read -rp "Enforce sudo reprompt every time? (Defaults timestamp_timeout=0) [y/N]: " ans
 if [[ "${ans,,}" != y* ]]; then
     say "[80] Skipping sudo reprompt hardening"
-    return 0
+    if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+        return 0
+    else
+        exit 0
+    fi
 fi
 
 TARGET="/etc/sudoers.d/90_timestamp_timeout"

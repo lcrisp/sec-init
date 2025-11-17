@@ -4,6 +4,7 @@
 # This module is sourced by secure-init.sh and runs as a normal user (uses sudo internally).
 
 set -euo pipefail
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 say(){ echo -e "\n[ $(date '+%F %T') ] $*"; }
 need(){ command -v "$1" >/dev/null 2>&1 || { echo "Missing: $1"; exit 1; }; }
 
@@ -44,7 +45,11 @@ say "[70] Running grub-mkpasswd-pbkdf2 (you will be asked for the GRUB password 
 grub-mkpasswd-pbkdf2 | tee "$TMP_HASH_FILE"
 
 HASH=$(awk '/grub.pbkdf2/ {print $NF}' "$TMP_HASH_FILE" || true)
-rm -f "$TMP_HASH_FILE"
+if command -v shred >/dev/null 2>&1; then
+  shred -u "$TMP_HASH_FILE"
+else
+  rm -f "$TMP_HASH_FILE"
+fi
 
 if [[ -z "${HASH:-}" ]]; then
   say "[70] ERROR: Failed to parse grub.pbkdf2 hash. Aborting."

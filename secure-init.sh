@@ -4,12 +4,21 @@
 # --------------------------------------------------------------
 
 set -euo pipefail
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 
 # --- Setup logging directory ---
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOG_DIR="$HOME/secure-init"
 mkdir -p "$LOG_DIR"
 LOGFILE="$LOG_DIR/secure-init.log"
+#MODULE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+MODULE_DIR="~/secure-init/modules"
+ROOTDIR="$( cd "$MODULE_DIR/.." && pwd )"
+
+#LISTDIR="$ROOTDIR/lists"
+LISTDIR="~/secure-init/lists"
+
+
 
 exec > >(tee -a "$LOGFILE") 2>&1
 

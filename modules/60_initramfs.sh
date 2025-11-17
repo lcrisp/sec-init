@@ -17,7 +17,14 @@ ID_LOWER="$(echo "${ID:-}" | tr '[:upper:]' '[:lower:]')"
 #    Format is different for dracut vs initramfs-tools
 # ----------------------------------------------------------------------
 
-if command -v dracut >/dev/null 2>&1; then
+USE_DRACUT=0
+if [[ "${FORCE_INITRAMFS_TOOLS:-0}" == "1" ]]; then
+    USE_DRACUT=0
+elif command -v dracut >/dev/null 2>&1; then
+    USE_DRACUT=1
+fi
+
+if [[ "$USE_DRACUT" -eq 1 ]]; then
     say "  dracut detected — installing HID rules"
     sudo mkdir -p /etc/dracut.conf.d
 
@@ -41,7 +48,7 @@ fi
 # ----------------------------------------------------------------------
 say "  Rebuilding initramfs now"
 
-if command -v dracut >/dev/null 2>&1; then
+if [[ "$USE_DRACUT" -eq 1 ]]; then
     sudo dracut -f
 else
     sudo update-initramfs -u

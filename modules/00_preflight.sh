@@ -23,7 +23,7 @@ for c in "${REQ[@]}"; do
         exit 1
     fi
     say "ok: $c"
-pos
+done
 
 # --- Step 3: check for YubiKey presence (hidraw)
 say "Detecting hidraw devices..."

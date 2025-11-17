@@ -4,6 +4,7 @@
 # This module is sourced by secure-init.sh
 
 set -euo pipefail
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 say(){ echo -e "\n[ $(date '+%F %T') ] $*"; }
 need(){ command -v "$1" >/dev/null 2>&1 || { echo "Missing: $1"; exit 1; }; }
 
@@ -20,12 +21,28 @@ if [[ ! -b "$LUKS_DEV" ]]; then
     exit 1
 fi
 
-UUID=$(blkid -s UUID -o value "$LUKS_DEV") || {
+UUID=$(sudo blkid -s UUID -o value "$LUKS_DEV") || {
     say "ERROR: Could not get UUID for $LUKS_DEV"
     exit 1
 }
 
 NAME="cryptroot"
+if [[ -f /etc/crypttab ]]; then
+    EXISTING_NAME="$(awk -v uuid="$UUID" -v dev="$LUKS_DEV" '
+        $0 ~ /^\s*#/ { next }
+        $2 ~ uuid || $2 ~ dev { print $1; exit }
+    ' /etc/crypttab || true)"
+    if [[ -n "${EXISTING_NAME:-}" ]]; then
+        NAME="$EXISTING_NAME"
+        say "Detected existing crypttab entry name: $NAME"
+    fi
+fi
+
+read -rp "Enter mapper name to use [${NAME}]: " NAME_INPUT
+if [[ -n "${NAME_INPUT:-}" ]]; then
+    NAME="$NAME_INPUT"
+fi
+
 LINE="$NAME UUID=$UUID none luks,fido2-device=auto"
 
 # Ensure crypttab exists
