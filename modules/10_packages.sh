@@ -132,9 +132,36 @@ if [[ $INSTALL_STATUS -ne 0 ]]; then
 fi
 
 # Ensure dracut exists (Debian sometimes omits it)
-if ! command -v dracut >/dev/null 2>&1; then
-    sudo apt-get install -y dracut 2>&1 | tee -a "$PKG_LOG" || true
-fi
+maybe_install_dracut() {
+    local mode="${DRACUT_INSTALL:-auto}"
+
+    if command -v dracut >/dev/null 2>&1; then
+        return 0
+    fi
+
+    case "$mode" in
+        0|no|false|off|skip)
+            say "[10] DRACUT_INSTALL=$mode — skipping dracut install"
+            return 0
+            ;;
+    esac
+
+    if [[ "$mode" != "auto" ]]; then
+        say "[10] Forcing dracut install (DRACUT_INSTALL=$mode)"
+        sudo apt-get install -y dracut 2>&1 | tee -a "$PKG_LOG" || true
+        return 0
+    fi
+
+    # auto mode: only install when cryptsetup advertises FIDO2 support
+    if command -v cryptsetup >/dev/null 2>&1 && cryptsetup --help 2>/dev/null | grep -q "fido2-token"; then
+        say "[10] cryptsetup reports FIDO2 support — installing dracut to enable FIDO2 initramfs hooks"
+        sudo apt-get install -y dracut 2>&1 | tee -a "$PKG_LOG" || true
+    else
+        say "[10] cryptsetup lacks FIDO2 support; skipping dracut install (set DRACUT_INSTALL=1 to force)"
+    fi
+}
+
+maybe_install_dracut
 
 say "[10] Package installation complete"
 
