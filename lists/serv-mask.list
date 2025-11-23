@@ -1,0 +1,6 @@
+##mask these services
+avahi-daemon
+cups
+cups-browsed
+wpa_supplicant
+ModemManager

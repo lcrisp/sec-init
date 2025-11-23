@@ -8,17 +8,16 @@ PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 
 # --- Setup logging directory ---
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
-LOG_DIR="$HOME/secure-init"
-mkdir -p "$LOG_DIR"
+LOG_HOME="${LOG_HOME:-$HOME/.logs}"
+LOG_DIR="$LOG_HOME/secure-init"
+mkdir -p "$LOG_HOME" "$LOG_DIR"
 LOGFILE="$LOG_DIR/secure-init.log"
-#MODULE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-MODULE_DIR="~/secure-init/modules"
-ROOTDIR="$( cd "$MODULE_DIR/.." && pwd )"
+MODULE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+#MODULE_DIR="~/secure-init/modules"
+ROOTDIR="$MODULE_DIR"
 
-#LISTDIR="$ROOTDIR/lists"
-LISTDIR="~/secure-init/lists"
-
-
+LISTDIR="${LISTDIR:-$ROOTDIR/lists}"
+#LISTDIR="~/secure-init/lists"
 
 exec > >(tee -a "$LOGFILE") 2>&1
 
@@ -33,6 +32,7 @@ ERR(){
 
 say "Starting secure-init orchestrator"
 say "Modules directory: $BASE_DIR/modules"
+say "Package list directory: $LISTDIR"
 
 
 # --- Preflight sanity checks ---
@@ -62,7 +62,7 @@ done
 
 
 # --- Export safe environment for modules ---
-export LOG_DIR LOGFILE BASE_DIR
+export LOG_DIR LOGFILE BASE_DIR LISTDIR
 
 
 # --- Execute modules in order ---

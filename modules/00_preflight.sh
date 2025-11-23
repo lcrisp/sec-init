@@ -39,7 +39,7 @@ groups | grep -qw plugdev && HAS_PLUGDEV=1 || HAS_PLUGDEV=0
 say "plugdev membership: $HAS_PLUGDEV"
 
 # --- Step 5: confirm logging directory
-LOGROOT="$HOME/secure-init"
+LOGROOT="${LOG_DIR:-$HOME/.logs/secure-init}"
 mkdir -p "$LOGROOT"
 LOGFILE="$LOGROOT/preflight.log"
 exec > >(tee "$LOGFILE") 2>&1

@@ -5,7 +5,7 @@
 set -euo pipefail
 say(){ echo -e "\n[ $(date '+%F %T') ] $*"; }
 
-LOG_ROOT="${LOG_DIR:-$HOME/secure-init}"
+LOG_ROOT="${LOG_DIR:-$HOME/.logs/secure-init}"
 mkdir -p "$LOG_ROOT"
 DEBSUMS_LOG="$LOG_ROOT/debsums-baseline.log"
 CLAMAV_LOG="$LOG_ROOT/clamav-scan.log"

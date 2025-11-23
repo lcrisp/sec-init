@@ -80,7 +80,6 @@ Installs:
 - libpam-u2f
 - systemd-cryptsetup
 - openssh
-- keepassxc
 - dracut (optional)
 
 Idempotent.
@@ -92,6 +91,20 @@ Configures:
 - hidraw permissions
 
 Ensures correct device ownership before enrollment.
+
+### 15_services.sh
+Consumes:
+- `lists/serv-dsbl.list` → units to `systemctl disable --now`
+- `lists/serv-mask.list` → units to `systemctl mask --now`
+
+Blank/default files live under `lists/` so operators can opt-in by adding units line-by-line.
+
+### 25_keyring.sh
+Configures:
+- user-level overrides for GNOME Keyring autostart
+- masks `gnome-keyring-daemon` user units to suppress password prompts
+
+Prevents desktop prompts that would otherwise appear when skipping UNIX passwords.
 
 ### 30_enrol.sh
 Handles:
@@ -128,6 +141,14 @@ Handles:
 - fido2 + hid + usbhid inclusion
 - rebuilds initramfs safely
 
+### 65_luks_finalize.sh
+Handles:
+- `cryptsetup luksDump` verification (requires two FIDO2 tokens)
+- header backups to `~/luks_h_backup`
+- optional removal of any legacy/non-FIDO keyslots
+
+Only runs after enrollment + initramfs rebuild so the volume can be safely locked down.
+
 ### 70_grub.sh
 - interactive password hashing
 - writes 40_custom
@@ -155,7 +176,7 @@ This module **must always run last**.
 ## 6. Logging
 All logs go to:
 ```
-~/secure-init/secure-init.log
+~/.logs/secure-init/secure-init.log
 ```
 Never contains sensitive outputs.
 
@@ -173,7 +194,7 @@ Rules:
 ## 8. Debugging
 1. View logs:
 ```
-cat ~/secure-init/secure-init.log
+cat ~/.logs/secure-init/secure-init.log
 ```
 2. Re-run the entire script (safe—modules are idempotent).
 3. Run a single module:

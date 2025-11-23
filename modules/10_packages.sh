@@ -21,6 +21,9 @@ LISTDIR="$(cd "$LISTDIR" && pwd)"
 DEFAULT_LIST="$LISTDIR/packages-default.list"
 USER_LIST="$LISTDIR/packages-user.list"
 EXTRA_LIST="$LISTDIR/packages-extra.list"
+LOG_ROOT="${LOG_DIR:-$HOME/.logs/secure-init}"
+mkdir -p "$LOG_ROOT"
+PKG_LOG="$LOG_ROOT/packages-install.log"
 
 say "[10] Installing packages from defaults + user-defined lists"
 
@@ -54,17 +57,83 @@ fi
 say "[10] Package manifest:"
 sed 's/^/   - /' "$TMP_PKG"
 
+say "[10] Logging apt output to $PKG_LOG"
+
+detect_release() {
+    if command -v lsb_release >/dev/null 2>&1; then
+        DISTRO=$(lsb_release -si | tr '[:upper:]' '[:lower:]')
+        CODENAME=$(lsb_release -sc)
+        RELEASE_DESC=$(lsb_release -sd || true)
+    elif [[ -r /etc/os-release ]]; then
+        # shellcheck disable=SC1091
+        . /etc/os-release
+        DISTRO="${ID:-}"
+        CODENAME="${VERSION_CODENAME:-}"
+        RELEASE_DESC="${PRETTY_NAME:-$ID}"
+    else
+        say "[10] WARNING: Unable to detect distribution; leaving sources.list unchanged"
+        return 1
+    fi
+
+    if [[ -z "${DISTRO:-}" || -z "${CODENAME:-}" ]]; then
+        say "[10] WARNING: Missing distro/codename; leaving sources.list unchanged"
+        return 1
+    fi
+
+    say "[10] Detected release: ${RELEASE_DESC:-$DISTRO} ($DISTRO/$CODENAME)"
+    return 0
+}
+
+configure_sources_list() {
+    if ! detect_release; then
+        return 0
+    fi
+
+    case "$DISTRO" in
+        ubuntu)
+            MIRROR="http://mirror.linux.org.au/ubuntu"
+            sudo tee /etc/apt/sources.list >/dev/null <<EOF
+deb $MIRROR $CODENAME main restricted universe multiverse
+deb $MIRROR $CODENAME-updates main restricted universe multiverse
+deb $MIRROR $CODENAME-backports main restricted universe multiverse
+deb $MIRROR $CODENAME-security main restricted universe multiverse
+EOF
+            ;;
+        debian)
+            sudo tee /etc/apt/sources.list >/dev/null <<'EOF'
+deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] http://mirror.linux.org.au/debian forky main contrib non-free non-free-firmware
+deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] http://mirror.linux.org.au/debian forky-updates main contrib non-free non-free-firmware
+deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] http://deb.debian.org/debian-security trixie-security main contrib non-free non-free-firmware
+EOF
+            ;;
+        *)
+            say "[10] WARNING: Unsupported distro '$DISTRO'; leaving sources.list unchanged"
+            return 0
+            ;;
+    esac
+
+    say "[10] /etc/apt/sources.list updated to mirror.linux.org.au"
+}
+
+configure_sources_list
+
 say "[10] apt update"
-sudo apt-get update -y
+sudo apt-get update -y 2>&1 | tee -a "$PKG_LOG"
+UPDATE_STATUS=${PIPESTATUS[0]}
+if [[ $UPDATE_STATUS -ne 0 ]]; then
+    say "[10] WARNING: apt update reported failures (see $PKG_LOG)"
+fi
 
 say "[10] Installing package set"
-if ! sudo xargs -a "$TMP_PKG" apt-get install -y; then
-    say "[10] WARNING: Some packages failed to install (continuing)"
+sudo xargs -a "$TMP_PKG" apt-get install -y 2>&1 | tee -a "$PKG_LOG"
+INSTALL_STATUS=${PIPESTATUS[0]}
+if [[ $INSTALL_STATUS -ne 0 ]]; then
+    say "[10] WARNING: Some packages failed to install (continuing — see $PKG_LOG)"
 fi
 
 # Ensure dracut exists (Debian sometimes omits it)
 if ! command -v dracut >/dev/null 2>&1; then
-    sudo apt-get install -y dracut || true
+    sudo apt-get install -y dracut 2>&1 | tee -a "$PKG_LOG" || true
 fi
 
 say "[10] Package installation complete"

@@ -72,6 +72,37 @@ EOF
 
 sudo chmod 755 /etc/grub.d/40_custom
 
+# --- Allow default Linux entries to boot without a password ---
+LINUX_SIMPLE_NEEDLE="menuentry '$(echo \"\$os\" | grub_quote)' \${CLASS}"
+LINUX_SIMPLE_UNRESTRICTED="menuentry --unrestricted '$(echo \"\$os\" | grub_quote)' \${CLASS}"
+LINUX_SCRIPT="/etc/grub.d/10_linux"
+
+if [[ -f "$LINUX_SCRIPT" ]]; then
+  if sudo grep -Fq "$LINUX_SIMPLE_UNRESTRICTED" "$LINUX_SCRIPT"; then
+    say "[70] Default Linux menuentry already marked --unrestricted"
+  elif sudo grep -Fq "$LINUX_SIMPLE_NEEDLE" "$LINUX_SCRIPT"; then
+    say "[70] Marking default Linux menuentry as --unrestricted so normal boots skip the password"
+    sudo python3 - "$LINUX_SCRIPT" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+needle = "menuentry '$(echo \"$os\" | grub_quote)' ${CLASS}"
+replacement = "menuentry --unrestricted '$(echo \"$os\" | grub_quote)' ${CLASS}"
+text = path.read_text()
+if needle not in text:
+    sys.exit("[70] ERROR: Could not mark Linux menuentry as unrestricted (pattern missing)")
+if replacement in text:
+    sys.exit(0)
+path.write_text(text.replace(needle, replacement, 1))
+PY
+  else
+    say "[70] WARNING: Could not find Linux menuentry pattern to relax password requirement"
+  fi
+else
+  say "[70] WARNING: $LINUX_SCRIPT not found; skipping unrestricted tweak"
+fi
+
 # --- Regenerate GRUB config ---
 say "[70] Running update-grub to apply changes"
 sudo update-grub

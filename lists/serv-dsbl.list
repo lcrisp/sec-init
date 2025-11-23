@@ -1,0 +1,2 @@
+# One systemd unit per line (e.g., bluetooth.service). Lines starting with # are ignored.
+# These units will be disabled + stopped via `systemctl disable --now`.
